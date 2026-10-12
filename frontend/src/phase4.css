@@ -1,0 +1,5 @@
+.checkin-button { min-height: 28px; padding: 0 9px; border: 1px solid #d8d7ed; border-radius: 5px; background: #f8f8fc; color: #56548f; font: 600 9px 'DM Sans',sans-serif; white-space: nowrap; cursor: pointer; }
+.checkin-button:hover { border-color: #aaa8d3; background: #f0effa; }
+.checkin-button.is-checked { border-color: #d4e7d8; background: #eff8f1; color: #4b8060; }
+.checkin-button:disabled { opacity: .55; cursor: default; }
+.attendee-table th:last-child,.attendee-table td:last-child { text-align: center; }
