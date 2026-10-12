@@ -1,0 +1,156 @@
+/* A more legible, formal campus look shared by every project phase. */
+:root {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  color: #182d42;
+  background: #f4f6f8;
+  font-size: 16px;
+  --campus-ink: #18344f;
+  --campus-blue: #214f72;
+  --campus-gold: #b78a3d;
+  --campus-muted: #5e6e7c;
+  --campus-line: #dce3e8;
+  --campus-paper: #fff;
+}
+
+body { color: var(--campus-ink); background: #f4f6f8; }
+.app-shell { max-width: 1500px; background: #fff; }
+.topbar { height: 84px; border-color: var(--campus-line); }
+.brand { color: var(--campus-ink); font-size: 21px; letter-spacing: -.5px; }
+.brand-light { color: #627486; }
+.brand-mark { width: 36px; height: 36px; border-radius: 8px; background: var(--campus-blue); font-size: 18px; }
+.topbar nav { gap: 38px; }
+.topbar nav a, .topbar nav button.nav-button { color: #536779; font-size: 15px; }
+.topbar nav .nav-active, .topbar nav button.nav-button.nav-active { color: var(--campus-blue); border-color: var(--campus-gold); }
+.account-actions { gap: 16px; }
+.welcome-name { color: #52677a; font-size: 14px; }
+.login-button { padding: 13px 18px; border-color: #ccd7df; border-radius: 6px; color: var(--campus-blue); font-size: 14px; }
+.hero { min-height: 490px; padding-top: 82px; padding-bottom: 56px; background: #fbfaf7; }
+.eyebrow { color: #8b6a2f; font-size: 12px; letter-spacing: 2px; }
+.live-dot { width: 8px; height: 8px; background: var(--campus-gold); }
+.hero h1, .section-heading h2 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -1.6px; }
+.hero h1 { max-width: 630px; margin-top: 22px; color: #18344f; font-size: clamp(50px, 5vw, 66px); line-height: 1.09; }
+.hero h1 span, .section-heading h2 span { color: var(--campus-blue); }
+.hero-copy p { max-width: 480px; color: #5b6c7b; font-size: 18px; line-height: 1.75; }
+.hero-link { margin-top: 22px; color: #214f72; font-size: 15px; }
+.hero-art { min-height: 330px; border-radius: 8px; background-color: #e9eef2; background-image: radial-gradient(#cbd5dd 1px,transparent 1px); }
+.sun { background: #d8b46f; }
+.poster b { color: var(--campus-ink); }
+.art-floor { background: #d3dfe7; }
+.art-caption { font-size: 9px; }
+.hero-index { font-size: 10px; }
+.events-section { padding-top: 64px; padding-bottom: 46px; background: #f3f6f8; }
+.section-heading h2 { color: var(--campus-ink); font-size: 42px; }
+.heading-note { color: var(--campus-muted); font-size: 14px; }
+.event-controls { margin-top: 35px; border-color: #d6dfe5; }
+.category-tabs { gap: 25px; }
+.tab { padding-bottom: 16px; color: #5f7180; font-size: 14px; }
+.tab.selected { color: var(--campus-blue); border-color: var(--campus-gold); }
+.search { color: var(--campus-blue); }
+.search input { width: 175px; font-size: 14px; }
+.search input::placeholder { color: #71808c; }
+.event-grid { gap: 20px; padding-top: 26px; }
+.event-card { overflow: hidden; border: 1px solid #dbe3e8; border-radius: 9px; box-shadow: 0 4px 14px rgba(24,52,79,.035); }
+.event-card:hover { box-shadow: 0 12px 28px rgba(24,52,79,.11); }
+.card-art { height: 128px; background-color: #e7edf1; }
+.card-art-1 { background-color: #f2e8df; }
+.card-art-2 { background-color: #e2ece7; }
+.card-art-3 { background-color: #f0ecdf; }
+.card-category { padding: 6px 9px; border-radius: 4px; color: var(--campus-blue); font-size: 11px; }
+.card-date { width: 44px; height: 48px; color: #5a6c7c; font-size: 10px; }
+.card-date b { color: var(--campus-ink); font-size: 17px; }
+.card-content { padding: 17px 17px 15px; }
+.card-meta { color: #5f7180; font-size: 12px; }
+.card-content h3 { margin: 10px 0 7px; color: var(--campus-ink); font: 600 19px/1.25 'DM Sans',sans-serif; letter-spacing: -.3px; }
+.card-content p { height: 54px; color: #5d6d7a; font-size: 14px; line-height: 1.6; }
+.card-bottom { padding-top: 12px; margin-top: 12px; color: #5c6e7c; font-size: 12px; }
+.card-bottom button { width: 32px; height: 32px; border-color: #d3dde4; color: var(--campus-blue); }
+.message { color: var(--campus-muted); font-size: 15px; }
+.section-footer { padding-top: 28px; color: #6d7b87; font-size: 10px; }
+.section-footer b { color: var(--campus-blue); font-size: 14px; }
+footer { min-height: 84px; border-top: 1px solid #e1e7eb; }
+footer .brand { font-size: 17px; }
+footer .brand-mark { width: 29px; height: 29px; font-size: 15px; }
+footer > span { color: #617282; font-size: 12px; }
+footer > span:last-child { font-size: 10px; }
+
+/* Student, organizer, and dialog screens */
+.registrations-page, .organizer-page, .profile-page { color: var(--campus-ink); }
+.registrations-page .section-heading h2, .organizer-heading h1 { color: var(--campus-ink); font-family: Georgia,'Times New Roman',serif; font-size: 42px; letter-spacing: -1.2px; }
+.registration-card, .organizer-event-card, .profile-card, .organizer-stats article { border-color: #dbe3e8; border-radius: 9px; box-shadow: 0 4px 14px rgba(24,52,79,.045); }
+.registration-card::before { background: var(--campus-gold); }
+.registration-date { border-color: #d8e1e7; background: #eaf0f4; color: var(--campus-blue); }
+.registration-date.card-art-1 { background: #f5eae3; color: #9a654d; }
+.registration-date.card-art-2 { background: #e6efe9; color: #4d7664; }
+.registration-date.card-art-3 { background: #f2eddc; color: #8d7136; }
+.registration-info h3, .organizer-event-main h3, .profile-card h3 { color: var(--campus-ink); font-size: 20px; }
+.registration-info .card-meta, .registration-info p, .organizer-event-main > p, .organizer-event-main .card-meta { color: #5d6d7a; font-size: 13px; }
+.cancel-button, .attendee-button, .organizer-action-row button, .editor-cancel, .attendee-export, .calendar-button, .feedback-button { min-height: 40px; padding-right: 14px; padding-left: 14px; border-color: #cbd7df; border-radius: 6px; color: var(--campus-blue); font-size: 13px; }
+.cancel-button:hover:not(:disabled) { color: #9b493e; }
+.empty-registrations h3, .attendee-empty b { color: var(--campus-ink); font-size: 21px; }
+.empty-registrations p, .empty-registrations .primary-button { font-size: 14px; }
+.organizer-heading p { color: #5d6d7a; font-size: 15px; }
+.organizer-stats article > span, .organizer-stats small { color: #5e6e7c; font-size: 12px; }
+.organizer-stats b { color: var(--campus-ink); font-size: 31px; }
+.attendee-meter > div:first-child { color: #5d6d7a; font-size: 12px; }
+.meter-track i { background: var(--campus-blue); }
+.attendee-button span { background: #eaf0f4; color: var(--campus-blue); font-size: 11px; }
+.modal-backdrop { background: rgba(18,37,55,.62); }
+.event-modal, .auth-modal, .event-editor-modal, .attendee-modal, .feedback-modal { border: 1px solid #dce3e8; border-radius: 12px; }
+.modal-body h2, .auth-modal h2, .event-editor-modal h2, .attendee-modal h2, .feedback-modal h2 { color: var(--campus-ink); font-family: Georgia,'Times New Roman',serif; letter-spacing: -.5px; }
+.modal-body > p, .auth-modal > p, .editor-intro, .attendee-subtitle, .feedback-modal > p { color: #5d6d7a; font-size: 15px; line-height: 1.65; }
+.detail-row { padding: 14px 0; font-size: 14px; }
+.detail-row span, .capacity-note { color: #687987; font-size: 12px; }
+.detail-row b { color: var(--campus-ink); font-size: 14px; }
+.register-button, .primary-button { border-radius: 6px; background: var(--campus-blue); font-size: 14px; }
+.register-button:hover:not(:disabled), .primary-button:hover { background: #173a57; }
+.register-button:disabled, .phase-button { background: #e8edf0; color: #566b7a; }
+.auth-form label, .event-editor-form label, .profile-card label, .feedback-modal form > label { color: #314a60; font-size: 14px; }
+.auth-form input, .auth-form select, .event-editor-form input, .event-editor-form select, .event-editor-form textarea, .profile-card input, .feedback-modal textarea { min-height: 48px; border-color: #ccd7df; border-radius: 6px; color: var(--campus-ink); font-size: 15px; }
+.event-editor-form textarea, .feedback-modal textarea { min-height: 110px; }
+.auth-message, .notice-message, .modal-notice, .editor-error { font-size: 14px; }
+.auth-switch, .auth-switch button { font-size: 14px; }
+.profile-card p { color: #607181; font-size: 14px; }
+.profile-avatar { background: #eaf0f4; color: var(--campus-blue); }
+.attendee-count, .attendee-table td { color: #506577; font-size: 13px; }
+.attendee-table th { background: #eef2f5; color: #506577; font-size: 11px; }
+.attendee-avatar { background: #eaf0f4; color: var(--campus-blue); }
+.checkin-button { min-height: 34px; padding: 0 11px; border-color: #cbd7df; background: #f6f8f9; color: var(--campus-blue); font-size: 12px; }
+.checkin-button.is-checked { border-color: #c9ddce; background: #eff6f0; color: #3b6b4d; }
+
+@media (max-width: 850px) {
+  .hero h1 { font-size: 48px; }
+  .section-heading h2, .registrations-page .section-heading h2, .organizer-heading h1 { font-size: 36px; }
+  .card-content h3 { font-size: 17px; }
+  .card-content p { font-size: 13px; }
+}
+@media (max-width: 570px) {
+  .topbar { min-height: 70px; }
+  .brand { font-size: 19px; }
+  .topbar nav a, .topbar nav button.nav-button { font-size: 13px; }
+  .login-button { padding: 10px 12px; font-size: 12px; }
+  .hero { padding-top: 42px; }
+  .hero h1 { font-size: 43px; }
+  .hero-copy p { font-size: 16px; }
+  .hero-art { min-height: 250px; }
+  .events-section { padding-top: 43px; }
+  .section-heading h2, .registrations-page .section-heading h2, .organizer-heading h1 { font-size: 33px; }
+  .category-tabs { gap: 17px; }
+  .tab { font-size: 13px; }
+  .search input { width: 155px; font-size: 14px; }
+  .event-grid { gap: 11px; }
+  .card-art { height: 104px; }
+  .card-content { padding: 12px; }
+  .card-content h3 { font-size: 15px; white-space: normal; }
+  .card-content p { height: 62px; font-size: 12px; }
+  .card-meta, .card-bottom { font-size: 10px; }
+  .registration-card { grid-template-columns: 58px minmax(0,1fr); gap: 12px; padding: 14px; }
+  .registration-date { width: 54px; height: 60px; }
+  .registration-info h3, .organizer-event-main h3 { font-size: 17px; white-space: normal; }
+  .registration-info .card-meta, .registration-info p { font-size: 12px; }
+  .registration-actions { grid-column: 2; justify-content: flex-start; }
+  .organizer-heading p { font-size: 14px; }
+  .organizer-stats b { font-size: 27px; }
+  .organizer-stats article > span, .organizer-stats small { font-size: 10px; }
+  .event-editor-modal, .attendee-modal, .auth-modal { padding: 27px 20px 22px; }
+  footer > span:last-child { display: none; }
+}
