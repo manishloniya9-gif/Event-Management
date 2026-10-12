@@ -31,6 +31,16 @@ CREATE TABLE IF NOT EXISTS registrations (
   UNIQUE(user_id, event_id)
 );
 
+CREATE TABLE IF NOT EXISTS event_feedback (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, event_id)
+);
+
 INSERT OR IGNORE INTO events (id, title, description, category, event_date, venue, capacity, organizer_name)
 VALUES (1, 'TechFest 2026', 'A day of student technology showcases, coding challenges, and hands-on demonstrations.', 'Technology', '2026-11-08 10:00:00', 'Main Auditorium', 250, 'Computer Science Club');
 

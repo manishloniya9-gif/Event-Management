@@ -5,6 +5,15 @@ const icons = { Technology: '⌘', Cultural: '♫', Sports: '◉', Arts: '✳' }
 const prettyDate = (value) => new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 const prettyTime = (value) => new Date(value).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
 const inputDateTime = (value) => value ? String(value).replace(' ', 'T').slice(0, 16) : '';
+const calendarDate = (value) => new Date(value).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+const calendarEscape = (value) => String(value || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+function downloadCalendarEvent(event) {
+  const start = new Date(event.eventDate);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const content = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Campus Connect//College Events//EN', 'BEGIN:VEVENT', `UID:campusconnect-${event.eventId}@local`, `DTSTAMP:${calendarDate(new Date())}`, `DTSTART:${calendarDate(start)}`, `DTEND:${calendarDate(end)}`, `SUMMARY:${calendarEscape(event.title)}`, `DESCRIPTION:${calendarEscape(event.description)}`, `LOCATION:${calendarEscape(event.venue)}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const url = URL.createObjectURL(new Blob([content], { type: 'text/calendar;charset=utf-8' }));
+  const link = document.createElement('a'); link.href = url; link.download = `${event.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'campus-event'}.ics`; link.click(); URL.revokeObjectURL(url);
+}
 async function apiRequest(path, options = {}) {
   const token = localStorage.getItem('campusconnect-token');
   const response = await fetch(`http://localhost:4000${path}`, {
@@ -33,6 +42,7 @@ export default function App() {
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [editorEvent, setEditorEvent] = useState(null);
   const [attendeeView, setAttendeeView] = useState(null);
+  const [feedbackEvent, setFeedbackEvent] = useState(null);
 
   useEffect(() => {
     apiRequest('/api/events')
@@ -68,6 +78,20 @@ export default function App() {
     setUser(null);
     setView('events');
     setActionMessage('You have signed out.');
+  };
+  const saveProfile = async (name) => {
+    const result = await apiRequest('/api/me/profile', { method: 'PUT', body: JSON.stringify({ name }) });
+    setUser(result.user);
+    setActionMessage(result.message);
+  };
+  const saveFeedback = async (eventId, values) => {
+    setActionBusy(true);
+    try {
+      const result = await apiRequest(`/api/events/${eventId}/feedback`, { method: 'POST', body: JSON.stringify(values) });
+      setRegistrations(await apiRequest('/api/me/registrations'));
+      setFeedbackEvent(null);
+      setActionMessage(result.message);
+    } finally { setActionBusy(false); }
   };
   const registerForEvent = async () => {
     if (!user) { setAuthNotice('Sign in or create a student account to register.'); setAuthMode('login'); return; }
@@ -148,12 +172,12 @@ export default function App() {
   return <div className="app-shell">
     <header className="topbar">
       <a className="brand" href="#home" onClick={() => setSelected(null)}><span className="brand-mark">C</span><span>campus<span className="brand-light">connect</span></span></a>
-      <nav><button className={view === 'events' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('events')}>Discover events</button>{user?.role === 'student' && <button className={view === 'registrations' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('registrations')}>My registrations</button>}{user?.role === 'organizer' && <button className={view === 'organizer' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('organizer')}>Manage events</button>}<a href="#about">About</a></nav>
+      <nav><button className={view === 'events' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('events')}>Discover events</button>{user?.role === 'student' && <><button className={view === 'registrations' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('registrations')}>My registrations</button><button className={view === 'profile' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('profile')}>My profile</button></>}{user?.role === 'organizer' && <button className={view === 'organizer' ? 'nav-active nav-button' : 'nav-button'} onClick={() => setView('organizer')}>Manage events</button>}<a href="#about">About</a></nav>
       {user ? <div className="account-actions"><span className="welcome-name">Hi, {user.name.split(' ')[0]}</span><button className="login-button" onClick={signOut}>Sign out</button></div> : <button className="login-button" onClick={() => { setAuthNotice(''); setAuthMode('login'); }}>Sign in <span>↗</span></button>}
     </header>
 
     <main id="home">
-      {view !== 'organizer' && <section className="hero">
+      {view !== 'organizer' && view !== 'profile' && <section className="hero">
         <div className="hero-copy"><div className="eyebrow"><span className="live-dot"/> YOUR CAMPUS, MORE ALIVE</div>
           <h1>Make room for<br /><span>something memorable.</span></h1>
           <p>Discover what’s happening around campus. Find your people, try something new, and be part of it.</p>
@@ -183,16 +207,50 @@ export default function App() {
       </section> : view === 'registrations' ? <section className="events-section registrations-page" id="events">
         <div className="section-heading"><div><div className="eyebrow muted">YOUR CAMPUS PLANS</div><h2>My <span>registrations.</span></h2></div><div className="heading-note">Your next campus moments,<br/>all in one place.</div></div>
         {actionMessage && <div className="notice-message">{actionMessage}</div>}
-        {!registrations.length ? <div className="empty-registrations"><span>✳</span><h3>Nothing on your calendar yet.</h3><p>Find an event that sounds like you and save your spot.</p><button className="primary-button" onClick={() => setView('events')}>Explore events <span>↗</span></button></div> : <div className="registration-list">{registrations.map((registration, index) => <article className="registration-card" key={registration.registrationId}><div className={`registration-date card-art-${index % 4}`}><b>{new Date(registration.eventDate).toLocaleDateString('en-IN', { day: '2-digit' })}</b><span>{new Date(registration.eventDate).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()}</span></div><div className="registration-info"><div className="card-meta">{registration.category} <span>·</span> {prettyTime(registration.eventDate)}</div><h3>{registration.title}</h3><p>⌖ &nbsp;{registration.venue} <span>·</span> Hosted by {registration.organizerName}</p></div><button className="cancel-button" disabled={actionBusy} onClick={() => cancelRegistration(registration.eventId)}>Cancel registration</button></article>)}</div>}
-      </section> : <OrganizerDashboard events={organizerEvents} busy={actionBusy} message={actionMessage} onCreate={() => setEditorEvent({ mode: 'create' })} onEdit={(event) => setEditorEvent(event)} onCancel={cancelOrganizerEvent} onComplete={completeOrganizerEvent} onAttendees={openAttendees} />}
-      <footer id="about"><a className="brand" href="#home"><span className="brand-mark">C</span><span>campus<span className="brand-light">connect</span></span></a><span>Good things happen when we show up.</span><span>PHASE 3 · ORGANIZER MANAGEMENT</span></footer>
+        {!registrations.length ? <div className="empty-registrations"><span>✳</span><h3>Nothing on your calendar yet.</h3><p>Find an event that sounds like you and save your spot.</p><button className="primary-button" onClick={() => setView('events')}>Explore events <span>↗</span></button></div> : <div className="registration-list">{registrations.map((registration, index) => <StudentRegistrationCard key={registration.registrationId} registration={registration} index={index} busy={actionBusy} onCancel={cancelRegistration} onFeedback={setFeedbackEvent} />)}</div>}
+      </section> : view === 'profile' ? <section className="events-section profile-page"><div className="section-heading"><div><div className="eyebrow muted">YOUR ACCOUNT</div><h2>Student <span>profile.</span></h2></div></div><ProfileCard user={user} onSave={saveProfile} message={actionMessage} /></section> : <OrganizerDashboard events={organizerEvents} busy={actionBusy} message={actionMessage} onCreate={() => setEditorEvent({ mode: 'create' })} onEdit={(event) => setEditorEvent(event)} onCancel={cancelOrganizerEvent} onComplete={completeOrganizerEvent} onAttendees={openAttendees} />}
+      <footer id="about"><a className="brand" href="#home"><span className="brand-mark">C</span><span>campus<span className="brand-light">connect</span></span></a><span>Good things happen when we show up.</span><span>PHASE 4 · CAMPUS EVENTS</span></footer>
     </main>
 
     {selected && !authMode && <div className="modal-backdrop" onClick={() => { setSelected(null); setActionMessage(''); }}><section className="event-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => { setSelected(null); setActionMessage(''); }} aria-label="Close">×</button><div className={`modal-art card-art-${events.indexOf(selected) % 4}`}><span className="card-category">{selected.category}</span><span className="card-symbol">{icons[selected.category] || '✦'}</span></div><div className="modal-body"><div className="eyebrow muted">UPCOMING ON CAMPUS</div><h2 id="modal-title">{selected.title}</h2><p>{selected.description}</p><div className="detail-row"><span>DATE & TIME</span><b>{prettyDate(selected.eventDate)} · {prettyTime(selected.eventDate)}</b></div><div className="detail-row"><span>LOCATION</span><b>{selected.venue}</b></div><div className="detail-row"><span>HOSTED BY</span><b>{selected.organizerName}</b></div><div className="detail-row"><span>REGISTER BY</span><b>{prettyDate(selected.registrationDeadline || selected.eventDate)}</b></div><div className="capacity-note">{selected.capacity - (selected.registeredCount || 0)} of {selected.capacity} places remaining</div>{actionMessage && <div className="notice-message modal-notice">{actionMessage}</div>}<button className="phase-button register-button" disabled={actionBusy || registrations.some((item) => item.eventId === selected.id)} onClick={registerForEvent}>{registrations.some((item) => item.eventId === selected.id) ? 'You are registered' : actionBusy ? 'Please wait…' : 'Register for this event'}</button></div></section></div>}
     {authMode && <AuthDialog mode={authMode} initialMessage={authNotice} onClose={() => setAuthMode(null)} onSwitch={(mode) => { setAuthMode(mode); setAuthNotice(''); }} onSuccess={handleAuth} />}
     {editorEvent && <EventEditorDialog event={editorEvent.mode === 'create' ? null : editorEvent} busy={actionBusy} onClose={() => setEditorEvent(null)} onSave={saveOrganizerEvent} />}
     {attendeeView && <AttendeeDialog data={attendeeView} onClose={() => setAttendeeView(null)} onCheckIn={toggleCheckIn} />}
+    {feedbackEvent && <FeedbackDialog event={feedbackEvent} busy={actionBusy} onClose={() => setFeedbackEvent(null)} onSave={saveFeedback} />}
   </div>;
+}
+
+function StudentRegistrationCard({ registration, index, busy, onCancel, onFeedback }) {
+  return <article className="registration-card" key={registration.registrationId}>
+    <div className={`registration-date card-art-${index % 4}`}><b>{new Date(registration.eventDate).toLocaleDateString('en-IN', { day: '2-digit' })}</b><span>{new Date(registration.eventDate).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()}</span></div>
+    <div className="registration-info"><div className="card-meta">{registration.category} <span>·</span> {prettyTime(registration.eventDate)}</div><h3>{registration.title}</h3><p>⌖ &nbsp;{registration.venue} <span>·</span> Hosted by {registration.organizerName}</p>{registration.feedbackRating && <div className="saved-feedback">Your rating: {'★'.repeat(registration.feedbackRating)}{'☆'.repeat(5 - registration.feedbackRating)}</div>}</div>
+    <div className="registration-actions"><button className="calendar-button" onClick={() => downloadCalendarEvent(registration)}>Add to calendar</button>{registration.status === 'completed' && <button className="feedback-button" onClick={() => onFeedback(registration)}>{registration.feedbackRating ? 'Edit feedback' : 'Leave feedback'}</button>}{registration.status === 'upcoming' && <button className="cancel-button" disabled={busy} onClick={() => onCancel(registration.eventId)}>Cancel registration</button>}</div>
+  </article>;
+}
+
+function ProfileCard({ user, onSave, message }) {
+  const [name, setName] = useState(user?.name || '');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (event) => {
+    event.preventDefault(); setBusy(true); setError('');
+    try { await onSave(name); } catch (requestError) { setError(requestError.message); }
+    finally { setBusy(false); }
+  };
+  return <section className="profile-card"><div className="profile-avatar">{user?.name?.slice(0, 1).toUpperCase()}</div><div><div className="eyebrow muted">STUDENT ACCOUNT</div><h3>Your campus profile</h3><p>Keep your name up to date. Your college email is used for event registration.</p></div><form onSubmit={submit}><label>Full name<input value={name} onChange={(event) => setName(event.target.value)} minLength="2" maxLength="80" required /></label><label>College email<input value={user?.email || ''} readOnly /></label>{(error || message) && <div className={error ? 'editor-error' : 'notice-message'}>{error || message}</div>}<button className="primary-button" disabled={busy}>{busy ? 'Saving…' : 'Save profile'} <span>↗</span></button></form></section>;
+}
+
+function FeedbackDialog({ event, busy, onClose, onSave }) {
+  const [rating, setRating] = useState(event.feedbackRating || 0);
+  const [comment, setComment] = useState(event.feedbackComment || '');
+  const [error, setError] = useState('');
+  const submit = async (formEvent) => {
+    formEvent.preventDefault();
+    if (!rating) { setError('Choose a star rating before saving.'); return; }
+    try { setError(''); await onSave(event.eventId, { rating, comment }); }
+    catch (requestError) { setError(requestError.message); }
+  };
+  return <div className="modal-backdrop" onClick={onClose}><section className="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title" onClick={(clickEvent) => clickEvent.stopPropagation()}><button className="modal-close" onClick={onClose} aria-label="Close">×</button><div className="eyebrow muted">AFTER THE EVENT</div><h2 id="feedback-title">How was {event.title}?</h2><p>Your feedback helps organizers plan better campus events.</p><form onSubmit={submit}><div className="feedback-stars" role="radiogroup" aria-label="Rating from one to five stars">{[1, 2, 3, 4, 5].map((value) => <button type="button" key={value} role="radio" aria-checked={rating === value} aria-label={`${value} star${value === 1 ? '' : 's'}`} className={value <= rating ? 'star selected' : 'star'} onClick={() => setRating(value)}>★</button>)}</div><label>Your comments<textarea value={comment} onChange={(input) => setComment(input.target.value)} maxLength="1000" rows="4" placeholder="What did you enjoy? What could be improved?" /></label><small>{comment.length}/1000</small>{error && <div className="editor-error">{error}</div>}<div className="editor-footer"><button type="button" className="editor-cancel" onClick={onClose}>Cancel</button><button className="primary-button" disabled={busy}>{busy ? 'Saving…' : 'Save feedback'} <span>↗</span></button></div></form></section></div>;
 }
 
 function OrganizerDashboard({ events, busy, message, onCreate, onEdit, onCancel, onComplete, onAttendees }) {
@@ -200,13 +258,15 @@ function OrganizerDashboard({ events, busy, message, onCreate, onEdit, onCancel,
   const [statusFilter, setStatusFilter] = useState('all');
   const activeEvents = events.filter((event) => event.status === 'upcoming');
   const totalAttendees = events.reduce((sum, event) => sum + Number(event.registeredCount || 0), 0);
+  const totalCheckedIn = events.reduce((sum, event) => sum + Number(event.checkedInCount || 0), 0);
+  const remainingSeats = activeEvents.reduce((sum, event) => sum + Math.max(0, Number(event.capacity) - Number(event.registeredCount || 0)), 0);
   const visibleEvents = events.filter((event) => (statusFilter === 'all' || event.status === statusFilter) && `${event.title} ${event.category} ${event.venue}`.toLowerCase().includes(query.trim().toLowerCase()));
   return <section className="events-section organizer-page" id="events">
     <div className="organizer-heading"><div><div className="eyebrow muted">ORGANIZER WORKSPACE</div><h1>Manage your <span>events.</span></h1><p>Create events, keep details current, and see who’s coming.</p></div><button className="primary-button create-event-button" onClick={onCreate}><span className="create-plus">＋</span>Create an event</button></div>
     {message && <div className="notice-message">{message}</div>}
-    <div className="organizer-stats"><article><span>UPCOMING EVENTS</span><b>{activeEvents.length}</b><small>on the campus calendar</small></article><article><span>TOTAL ATTENDEES</span><b>{totalAttendees}</b><small>across your events</small></article><article><span>EVENTS MANAGED</span><b>{events.length}</b><small>including cancelled events</small></article></div>
+    <div className="organizer-stats"><article><span>UPCOMING EVENTS</span><b>{activeEvents.length}</b><small>on the campus calendar</small></article><article><span>REGISTRATIONS</span><b>{totalAttendees}</b><small>across your events</small></article><article><span>CHECKED IN</span><b>{totalCheckedIn}</b><small>student attendance</small></article><article><span>OPEN SEATS</span><b>{remainingSeats}</b><small>across upcoming events</small></article></div>
     <div className="organizer-list-heading"><div><div className="eyebrow muted">YOUR CALENDAR</div><h2>Events you host</h2></div><span>{visibleEvents.length} of {events.length} {events.length === 1 ? 'event' : 'events'}</span></div>
-    {!events.length ? <div className="empty-registrations organizer-empty"><span>✳</span><h3>Your first event starts here.</h3><p>Create an event to add it to the campus calendar and start taking registrations.</p><button className="primary-button" onClick={onCreate}>Create your first event <span>↗</span></button></div> : <><div className="organizer-filters"><label className="organizer-search">⌕<input aria-label="Search hosted events" placeholder="Search title, venue or category" value={query} onChange={(event) => setQuery(event.target.value)} /></label><select aria-label="Filter events by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All events</option><option value="upcoming">Upcoming</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>{visibleEvents.length ? <div className="organizer-event-list">{visibleEvents.map((event, index) => <article className="organizer-event-card" key={event.id}><div className={`organizer-date card-art-${index % 4}`}><b>{new Date(event.eventDate).toLocaleDateString('en-IN', { day: '2-digit' })}</b><span>{new Date(event.eventDate).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()}</span></div><div className="organizer-event-main"><div className="organizer-event-eyebrow"><span className="organizer-category">{event.category}</span><span className={`event-status ${event.status}`}>{event.status === 'upcoming' ? 'Upcoming' : event.status === 'cancelled' ? 'Cancelled' : 'Completed'}</span></div><h3>{event.title}</h3><p>{prettyTime(event.eventDate)} <span>·</span> {event.venue}</p><div className="attendee-meter"><div><span>{event.registeredCount} registered</span><span>{event.capacity} capacity</span></div><div className="meter-track"><i style={{ width: `${Math.min(100, (Number(event.registeredCount) / event.capacity) * 100)}%` }} /></div></div></div><div className="organizer-event-actions"><button className="attendee-button" onClick={() => onAttendees(event)}>Attendees <span>{event.registeredCount}</span></button><div className="organizer-action-row"><button onClick={() => onEdit(event)}>Edit</button><button className="complete-event-button" disabled={busy || event.status !== 'upcoming' || new Date(event.eventDate) > new Date()} title={new Date(event.eventDate) > new Date() ? 'Available after the scheduled event time' : 'Mark this event completed'} onClick={() => onComplete(event)}>Complete</button><button className="cancel-event-button" disabled={busy || event.status !== 'upcoming'} onClick={() => onCancel(event)}>Cancel event</button></div></div></article>)}</div> : <div className="organizer-filter-empty">No events match these filters. Try another search or status.</div>}</>}
+    {!events.length ? <div className="empty-registrations organizer-empty"><span>✳</span><h3>Your first event starts here.</h3><p>Create an event to add it to the campus calendar and start taking registrations.</p><button className="primary-button" onClick={onCreate}>Create your first event <span>↗</span></button></div> : <><div className="organizer-filters"><label className="organizer-search">⌕<input aria-label="Search hosted events" placeholder="Search title, venue or category" value={query} onChange={(event) => setQuery(event.target.value)} /></label><select aria-label="Filter events by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">All events</option><option value="upcoming">Upcoming</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>{visibleEvents.length ? <div className="organizer-event-list">{visibleEvents.map((event, index) => <article className="organizer-event-card" key={event.id}><div className={`organizer-date card-art-${index % 4}`}><b>{new Date(event.eventDate).toLocaleDateString('en-IN', { day: '2-digit' })}</b><span>{new Date(event.eventDate).toLocaleDateString('en-IN', { month: 'short' }).toUpperCase()}</span></div><div className="organizer-event-main"><div className="organizer-event-eyebrow"><span className="organizer-category">{event.category}</span><span className={`event-status ${event.status}`}>{event.status === 'upcoming' ? 'Upcoming' : event.status === 'cancelled' ? 'Cancelled' : 'Completed'}</span></div><h3>{event.title}</h3><p>{prettyTime(event.eventDate)} <span>·</span> {event.venue}</p><div className="attendee-meter"><div><span>{event.registeredCount} registered</span><span>{event.capacity} capacity</span></div><div className="meter-track"><i style={{ width: `${Math.min(100, (Number(event.registeredCount) / event.capacity) * 100)}%` }} /></div></div><div className="event-rating">{event.averageRating ? `★ ${event.averageRating} average rating` : 'No feedback yet'}</div></div><div className="organizer-event-actions"><button className="attendee-button" onClick={() => onAttendees(event)}>Attendees <span>{event.registeredCount}</span></button><div className="organizer-action-row"><button onClick={() => onEdit(event)}>Edit</button><button className="complete-event-button" disabled={busy || event.status !== 'upcoming' || new Date(event.eventDate) > new Date()} title={new Date(event.eventDate) > new Date() ? 'Available after the scheduled event time' : 'Mark this event completed'} onClick={() => onComplete(event)}>Complete</button><button className="cancel-event-button" disabled={busy || event.status !== 'upcoming'} onClick={() => onCancel(event)}>Cancel event</button></div></div></article>)}</div> : <div className="organizer-filter-empty">No events match these filters. Try another search or status.</div>}</>}
   </section>;
 }
 

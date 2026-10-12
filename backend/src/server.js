@@ -123,12 +123,22 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/me', authRequired, (req, res) => res.json({ user: publicUser(req.user) }));
 
+app.put('/api/me/profile', authRequired, (req, res) => {
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  if (name.length < 2 || name.length > 80) return res.status(400).json({ message: 'Name must be between 2 and 80 characters.' });
+  db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, req.user.id);
+  const user = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(req.user.id);
+  res.json({ user: publicUser(user), message: 'Profile saved.' });
+});
+
 app.get('/api/organizer/events', authRequired, organizerRequired, (req, res) => {
   const events = db.prepare(
     `SELECT e.id, e.title, e.description, e.category, e.event_date AS eventDate,
             e.registration_deadline AS registrationDeadline, e.venue, e.capacity,
             e.organizer_name AS organizerName, e.status,
-            COUNT(r.id) AS registeredCount
+            COUNT(r.id) AS registeredCount,
+            (SELECT COUNT(*) FROM registrations cr WHERE cr.event_id = e.id AND cr.attended_at IS NOT NULL) AS checkedInCount,
+            (SELECT ROUND(AVG(f.rating), 1) FROM event_feedback f WHERE f.event_id = e.id) AS averageRating
      FROM events e LEFT JOIN registrations r ON r.event_id = e.id
      WHERE e.organizer_id = ? GROUP BY e.id ORDER BY e.event_date ASC`
   ).all(req.user.id);
@@ -274,13 +284,33 @@ app.delete('/api/events/:id/register', authRequired, (req, res) => {
   res.json({ message: 'Your registration was cancelled.' });
 });
 
+app.post('/api/events/:id/feedback', authRequired, (req, res) => {
+  if (req.user.role !== 'student') return res.status(403).json({ message: 'Only student accounts can leave event feedback.' });
+  const event = db.prepare('SELECT id, status FROM events WHERE id = ?').get(req.params.id);
+  if (!event) return res.status(404).json({ message: 'Event not found.' });
+  if (event.status !== 'completed') return res.status(400).json({ message: 'Feedback is available after an event is completed.' });
+  const registered = db.prepare('SELECT id FROM registrations WHERE user_id = ? AND event_id = ?').get(req.user.id, event.id);
+  if (!registered) return res.status(403).json({ message: 'Only registered students can leave feedback.' });
+  const rating = Number(req.body.rating);
+  const comment = typeof req.body.comment === 'string' ? req.body.comment.trim() : '';
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ message: 'Choose a rating from 1 to 5 stars.' });
+  if (comment.length > 1000) return res.status(400).json({ message: 'Feedback must be 1000 characters or fewer.' });
+  db.prepare(
+    `INSERT INTO event_feedback (user_id, event_id, rating, comment) VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id, event_id) DO UPDATE SET rating = excluded.rating, comment = excluded.comment, created_at = CURRENT_TIMESTAMP`
+  ).run(req.user.id, event.id, rating, comment);
+  res.json({ message: 'Thanks for sharing your feedback.', rating, comment });
+});
+
 app.get('/api/me/registrations', authRequired, (_req, res) => {
   const registrations = db.prepare(
     `SELECT r.id AS registrationId, r.registered_at AS registeredAt,
             e.id AS eventId, e.title, e.description, e.category,
             e.event_date AS eventDate, e.registration_deadline AS registrationDeadline,
-            e.venue, e.organizer_name AS organizerName
+            e.venue, e.organizer_name AS organizerName, e.status,
+            f.rating AS feedbackRating, f.comment AS feedbackComment
      FROM registrations r JOIN events e ON e.id = r.event_id
+     LEFT JOIN event_feedback f ON f.user_id = r.user_id AND f.event_id = r.event_id
      WHERE r.user_id = ? ORDER BY e.event_date ASC`
   ).all(_req.user.id);
   res.json(registrations);
